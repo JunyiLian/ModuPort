@@ -8,5 +8,5 @@ authors:
   - family-names: "Lian"
     given-names: "Jun-Yi"
 license: MIT
-repository-code: "https://github.com/GITHUB_OWNER/ModuPort"
+repository-code: "https://github.com/JunyiLian/ModuPort"
 abstract: "ModuPort is a mechanics based superelement solver for structural analysis of multi-storey framed modular structures with arbitrary module layouts."
