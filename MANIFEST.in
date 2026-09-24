@@ -1,5 +1,6 @@
 include LICENSE
-include THIRD_PARTY_NOTICES.md
+include AUTHORS.md
+include NOTICE.md
 include CONTRIBUTING.md
 include CITATION.cff
 include README.md

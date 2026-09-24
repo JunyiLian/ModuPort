@@ -2,7 +2,7 @@
 
 ModuPort is a mechanics-based superelement solver for linear static and modal analysis of multi-storey framed modular structures. It exposes the validated Option-C computational backend through a small Python API and an interactive Streamlit interface.
 
-> **Publication status:** this repository is a local public-release candidate. Public distribution is blocked until the ownership and redistribution terms of the bundled RV30 adapter and private `mscsolver` sources are confirmed. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [LICENSE](LICENSE).
+Developed by [Jun-Yi Lian](AUTHORS.md) and released under the [MIT License](LICENSE).
 
 Interface documentation: **English** · [简体中文](docs/README_zh-CN.md) · [Français](docs/README_fr.md) · [Español](docs/README_es.md) · [Русский](docs/README_ru.md) · [العربية](docs/README_ar.md).
 
@@ -74,7 +74,7 @@ The normal Batch Screening workflow starts with the footprint sketcher, reports 
 - The solver currently addresses the validated linear static and modal formulations only.
 - Footprints must satisfy the topology and exact-cover requirements checked by the public input layer.
 - The first release retains the frozen A30 implementation byte-for-byte. Historical absolute-path strings remain inside two frozen source files, but portable bootstrap resolution prevents runtime dependence on those locations.
-- RV30 and `mscsolver` ownership/licensing must be resolved before public distribution.
+- The bundled RV30 adapter and `mscsolver` components are part of the same ModuPort development lineage and remain frozen for numerical reproducibility; see [NOTICE.md](NOTICE.md).
 - No SAP2000 automation, research datasets, A30/A32 cases, benchmark outputs, figures, or manuscript results are included.
 
 ## Repository structure
@@ -103,6 +103,6 @@ The sanitized repository-relative digest list is stored in [provenance/FROZEN_SO
 
 Citation metadata are provided in [CITATION.cff](CITATION.cff). Contributions must follow the frozen-core rules in [CONTRIBUTING.md](CONTRIBUTING.md): validated mechanics are not edited directly; wrappers, tests, and documentation belong outside the frozen directories.
 
-## License status
+## License
 
-No public open-source license is granted by this release candidate. See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Replace the review notice with an approved license only after every bundled dependency has been cleared for redistribution.
+ModuPort is released under the MIT License. See [LICENSE](LICENSE), [AUTHORS.md](AUTHORS.md), and [NOTICE.md](NOTICE.md).

@@ -226,7 +226,7 @@
   "about.solver_text": "Mechanics-based superelement solver with a numerically frozen validated core.",
   "about.version": "Version",
   "about.limitations": "Current limitations",
-  "about.limitations_list": "- Linear analysis only\n- One identical footprint and layout through all storeys\n- Orthogonal 1×2 and 2×1 modules only\n- No disconnected domains or storey-varying layouts\n- No nonlinear, BIM, cloud, or external-FEA coupling\n- Public licensing remains under review",
+  "about.limitations_list": "- Linear analysis only\n- One identical footprint and layout through all storeys\n- Orthogonal 1×2 and 2×1 modules only\n- No disconnected domains or storey-varying layouts\n- No nonlinear, BIM, cloud, or external-FEA coupling\n- Released under the MIT License",
   "about.architecture": "Software architecture",
   "architecture.ui": "User interface",
   "architecture.api": "Public Python API",

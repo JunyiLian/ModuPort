@@ -1,8 +1,7 @@
 # Contributing
 
 Contributions to documentation, examples, tests, packaging, the public API,
-layout enumeration, and the web interface are welcome after the repository's
-licensing review is complete.
+layout enumeration, and the web interface are welcome.
 
 Do not edit files in `src/moduport/_frozen/` or the frozen vendor dependency
 groups. Any proposed mechanics change requires a separate validation campaign
@@ -15,4 +14,3 @@ Before submitting a change:
 3. Check that no research data, local paths, credentials, or generated outputs
    have entered the repository.
 4. Keep API and web-interface calls on the same `ModuPort` facade.
-

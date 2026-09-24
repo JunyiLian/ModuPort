@@ -1,11 +1,12 @@
 cff-version: 1.2.0
-message: "If you use ModuPort, please cite the archived software release."
-title: "ModuPort: a mechanics-based superelement solver for framed modular structures"
+message: "If you use ModuPort, please cite this software and the associated academic publication."
+title: "ModuPort"
 type: software
 version: 0.1.0
 date-released: 2026-09-24
 authors:
-  - name: "ModuPort contributors"
-repository-code: "https://github.com/OWNER/ModuPort"
-abstract: "Citation metadata is provisional until the public repository and archive DOI are assigned."
-
+  - family-names: "Lian"
+    given-names: "Jun-Yi"
+license: MIT
+repository-code: "https://github.com/GITHUB_OWNER/ModuPort"
+abstract: "ModuPort is a mechanics based superelement solver for structural analysis of multi-storey framed modular structures with arbitrary module layouts."
