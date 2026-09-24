@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root { --ink:#24313d; --muted:#687684; --line:#bcc8d1; --void:#f6f8fa; --occupied:#a9cce3; --occupied-line:#39789d; --accent:#e89055; --bad:#b83a3a; }
+    * { box-sizing: border-box; }
+    body { margin:0; color:var(--ink); font-family:Arial,Helvetica,sans-serif; font-size:13px; background:transparent; user-select:none; }
+    .shell { border:1px solid #d4dce2; border-radius:7px; background:#fff; padding:10px; }
+    .toolbar { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:8px; }
+    button { border:1px solid #b9c5cf; background:#fff; color:var(--ink); border-radius:5px; padding:6px 9px; cursor:pointer; font:inherit; }
+    button:hover:not(:disabled) { background:#eef5f8; }
+    button.active { color:#fff; border-color:#326d90; background:#39789d; }
+    button:disabled { opacity:.38; cursor:default; }
+    .sep { width:1px; height:25px; background:#d7dee4; margin:0 1px; }
+    .spacer { flex:1; }
+    .canvas-wrap { position:relative; min-height:520px; height:620px; border:1px solid #b8c4cd; background:var(--void); overflow:hidden; touch-action:none; }
+    canvas { width:100%; height:100%; display:block; cursor:crosshair; }
+    .status { display:flex; gap:16px; flex-wrap:wrap; margin-top:8px; color:var(--muted); }
+    .status strong { color:var(--ink); }
+    .status .bad { color:var(--bad); font-weight:700; }
+    .help { margin-left:auto; color:var(--muted); font-size:12px; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="toolbar">
+      <button id="brush" data-tool="brush" class="active" title="Left-drag paints; right-drag erases">✎ Brush</button>
+      <button id="rectangle" data-tool="rectangle" title="Drag to add a rectangle">▭ Rectangle</button>
+      <button id="eraser" data-tool="eraser" title="Left-drag to erase">⌫ Eraser</button>
+      <button id="erase-rectangle" data-tool="erase-rectangle" title="Drag to subtract a rectangle">▱ Erase Rectangle</button>
+      <span class="sep"></span>
+      <button id="undo" title="Undo">↶ Undo</button>
+      <button id="redo" title="Redo">↷ Redo</button>
+      <button id="clear" title="Clear footprint">Clear</button>
+      <button id="fill" title="Fill every grid cell">Fill all</button>
+      <button id="invert" title="Invert occupied and void cells">Invert</button>
+      <span class="spacer"></span>
+      <button id="zoom-out" title="Zoom out">−</button>
+      <button id="fit" title="Fit grid to view">Fit</button>
+      <button id="zoom-in" title="Zoom in">+</button>
+    </div>
+    <div class="canvas-wrap" id="canvas-wrap"><canvas id="canvas"></canvas></div>
+    <div class="status">
+      <span><span id="occupied-label">Occupied cells</span>: <strong id="occupied">0</strong></span>
+      <span><span id="parity-label">Cell count</span>: <strong id="parity">Even</strong></span>
+      <span><span id="connectivity-label">Connectivity</span>: <strong id="connectivity">Disconnected</strong></span>
+      <span class="help" id="mouse-help">Left-drag: paint · Right-drag: erase</span>
+    </div>
+  </div>
+  <script src="sketcher_core.js"></script>
+  <script>
+    (() => {
+      "use strict";
+      const Core = window.ModuPortFootprintCore;
+      const canvas = document.getElementById("canvas");
+      const context = canvas.getContext("2d");
+      const wrap = document.getElementById("canvas-wrap");
+      let rows = 3, columns = 4, cells = new Set(), history = new Core.History([], 50);
+      let tool = "brush", hover = null, dragStart = null, dragCurrent = null, lastStrokeCell = null, strokeVisited = new Set(), strokeErase = false;
+      let scale = 1, renderKey = null, initialized = false;
+      let labels = { even:"Even", odd:"Odd", connected:"Connected", disconnected:"Disconnected" };
+
+      function applyStrings(values, rtl) {
+        const s = values || {}; labels = { ...labels, ...s };
+        const buttons = {
+          brush:["✎ ","brush","brush_help"], rectangle:["▭ ","rectangle","rectangle_help"],
+          eraser:["⌫ ","eraser","eraser_help"], "erase-rectangle":["▱ ","erase_rectangle","erase_rectangle_help"],
+          undo:["↶ ","undo","undo"], redo:["↷ ","redo","redo"], clear:["","clear","clear"],
+          fill:["","fill","fill"], invert:["","invert","invert"], "zoom-out":["− ","zoom_out","zoom_out"],
+          fit:["","fit","fit"], "zoom-in":["+ ","zoom_in","zoom_in"]
+        };
+        for (const [id, [icon, textKey, helpKey]] of Object.entries(buttons)) {
+          const node = document.getElementById(id); if (!node) continue;
+          if (s[textKey]) node.textContent = icon + s[textKey];
+          if (s[helpKey]) node.title = s[helpKey];
+        }
+        document.getElementById("occupied-label").textContent = s.occupied || "Occupied cells";
+        document.getElementById("parity-label").textContent = s.cell_count || "Cell count";
+        document.getElementById("connectivity-label").textContent = s.connectivity || "Connectivity";
+        document.getElementById("mouse-help").textContent = s.mouse_help || "Left-drag: paint · Right-drag: erase";
+        document.body.dir = rtl ? "rtl" : "ltr";
+        canvas.dir = "ltr";
+      }
+
+      function streamlitMessage(type, extra = {}) {
+        window.parent.postMessage({ isStreamlitMessage: true, type, ...extra }, "*");
+      }
+      function setHeight() { streamlitMessage("streamlit:setFrameHeight", { height: document.documentElement.scrollHeight }); }
+      function emitValue() {
+        streamlitMessage("streamlit:setComponentValue", { value: { occupied_cells: Core.sortedCells(cells) } });
+      }
+      function status() {
+        document.getElementById("occupied").textContent = cells.size;
+        document.getElementById("parity").textContent = cells.size % 2 ? labels.odd : labels.even;
+        const isConnected = Core.connected(cells);
+        const node = document.getElementById("connectivity");
+        node.textContent = isConnected ? labels.connected : labels.disconnected;
+        node.className = isConnected ? "" : "bad";
+        document.getElementById("undo").disabled = !history.canUndo;
+        document.getElementById("redo").disabled = !history.canRedo;
+      }
+      function geometry() {
+        const pad = 18;
+        const availableWidth = Math.max(80, canvas.clientWidth - pad * 2);
+        const availableHeight = Math.max(80, canvas.clientHeight - pad * 2);
+        const base = Math.min(availableWidth / columns, availableHeight / rows);
+        const size = Math.max(3, Math.min(72, base * scale));
+        return { size, left: (canvas.clientWidth - columns * size) / 2, top: (canvas.clientHeight - rows * size) / 2 };
+      }
+      function resizeCanvas() {
+        const ratio = window.devicePixelRatio || 1;
+        const width = Math.max(1, canvas.clientWidth), height = Math.max(1, canvas.clientHeight);
+        if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
+          canvas.width = Math.round(width * ratio); canvas.height = Math.round(height * ratio);
+        }
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+      }
+      function selectedRectangle() {
+        return dragStart && dragCurrent && ["rectangle", "erase-rectangle"].includes(tool)
+          ? new Set(Core.rectangleKeys(dragStart, dragCurrent)) : new Set();
+      }
+      function draw() {
+        resizeCanvas();
+        const width = canvas.clientWidth, height = canvas.clientHeight;
+        context.clearRect(0, 0, width, height);
+        const g = geometry();
+        const preview = selectedRectangle();
+        for (let row = 0; row < rows; row += 1) {
+          for (let column = 0; column < columns; column += 1) {
+            const key = Core.keyOf(row, column), x = g.left + column * g.size, y = g.top + row * g.size;
+            context.fillStyle = cells.has(key) ? "#a9cce3" : "#f7f9fa";
+            context.fillRect(x, y, g.size, g.size);
+            if (preview.has(key)) {
+              context.globalAlpha = 0.62;
+              context.fillStyle = tool === "rectangle" ? "#75b9df" : "#f0aa78";
+              context.fillRect(x, y, g.size, g.size);
+              context.globalAlpha = 1;
+            }
+            context.strokeStyle = cells.has(key) ? "#39789d" : "#bcc8d1";
+            context.lineWidth = 1;
+            context.strokeRect(Math.round(x) + .5, Math.round(y) + .5, Math.round(g.size), Math.round(g.size));
+          }
+        }
+        if (hover) {
+          const x = g.left + hover[1] * g.size, y = g.top + hover[0] * g.size;
+          context.strokeStyle = "#e07b39"; context.lineWidth = 2;
+          context.strokeRect(x + 1, y + 1, g.size - 2, g.size - 2);
+        }
+        context.strokeStyle = "#52616d"; context.lineWidth = 1.5;
+        context.strokeRect(g.left, g.top, columns * g.size, rows * g.size);
+        status();
+      }
+      function eventCell(event) {
+        const rect = canvas.getBoundingClientRect(), g = geometry();
+        const column = Math.floor((event.clientX - rect.left - g.left) / g.size);
+        const row = Math.floor((event.clientY - rect.top - g.top) / g.size);
+        return row >= 0 && row < rows && column >= 0 && column < columns ? [row, column] : null;
+      }
+      function paint(cell) {
+        if (!cell) return;
+        const key = Core.keyOf(cell[0], cell[1]);
+        if (strokeVisited.has(key)) return;
+        strokeVisited.add(key);
+        if (strokeErase) cells.delete(key); else cells.add(key);
+      }
+      function finishDrag() {
+        if (!dragStart) return;
+        if (["rectangle", "erase-rectangle"].includes(tool) && dragCurrent) {
+          for (const key of Core.rectangleKeys(dragStart, dragCurrent)) {
+            if (tool === "rectangle") cells.add(key); else cells.delete(key);
+          }
+        }
+        const changed = history.commit(cells);
+        cells = history.current();
+        dragStart = dragCurrent = lastStrokeCell = null; strokeVisited.clear();
+        draw();
+        if (changed) emitValue();
+      }
+      canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+      canvas.addEventListener("pointerdown", (event) => {
+        const cell = eventCell(event); if (!cell) return;
+        event.preventDefault(); canvas.setPointerCapture(event.pointerId);
+        dragStart = dragCurrent = lastStrokeCell = cell; strokeVisited = new Set();
+        strokeErase = event.button === 2 || tool === "eraser" || tool === "erase-rectangle";
+        if (["brush", "eraser"].includes(tool)) paint(cell);
+        draw();
+      });
+      canvas.addEventListener("pointermove", (event) => {
+        hover = eventCell(event);
+        if (dragStart) {
+          dragCurrent = hover || dragCurrent;
+          if (["brush", "eraser"].includes(tool) && hover) {
+            for (const traversed of Core.lineCells(lastStrokeCell, hover)) paint(traversed);
+            lastStrokeCell = hover;
+          }
+        }
+        draw();
+      });
+      canvas.addEventListener("pointerup", finishDrag);
+      canvas.addEventListener("pointercancel", finishDrag);
+      canvas.addEventListener("pointerleave", () => { hover = null; if (!dragStart) draw(); });
+
+      document.querySelectorAll("[data-tool]").forEach((button) => button.addEventListener("click", () => {
+        tool = button.dataset.tool;
+        document.querySelectorAll("[data-tool]").forEach((item) => item.classList.toggle("active", item === button));
+      }));
+      function action(mutator) { mutator(); const changed = history.commit(cells); cells = history.current(); draw(); if (changed) emitValue(); }
+      document.getElementById("undo").onclick = () => { cells = history.undo(); draw(); emitValue(); };
+      document.getElementById("redo").onclick = () => { cells = history.redo(); draw(); emitValue(); };
+      document.getElementById("clear").onclick = () => action(() => { cells.clear(); });
+      document.getElementById("fill").onclick = () => action(() => { for (let r = 0; r < rows; r += 1) for (let c = 0; c < columns; c += 1) cells.add(Core.keyOf(r, c)); });
+      document.getElementById("invert").onclick = () => action(() => { const next = new Set(); for (let r = 0; r < rows; r += 1) for (let c = 0; c < columns; c += 1) if (!cells.has(Core.keyOf(r, c))) next.add(Core.keyOf(r, c)); cells = next; });
+      document.getElementById("zoom-in").onclick = () => { scale = Math.min(3, scale * 1.2); draw(); };
+      document.getElementById("zoom-out").onclick = () => { scale = Math.max(.35, scale / 1.2); draw(); };
+      document.getElementById("fit").onclick = () => { scale = 1; draw(); };
+      new ResizeObserver(() => { draw(); setHeight(); }).observe(wrap);
+
+      window.addEventListener("message", (event) => {
+        const data = event.data || {};
+        if (data.type !== "streamlit:render") return;
+        const args = data.args || {};
+        applyStrings(args.strings, Boolean(args.rtl));
+        const nextRows = Math.max(1, Number(args.rows) || 1), nextColumns = Math.max(1, Number(args.columns) || 1);
+        const nextKey = String(args.footprint_key || "");
+        if (!initialized || nextKey !== renderKey || nextRows !== rows || nextColumns !== columns) {
+          rows = nextRows; columns = nextColumns; renderKey = nextKey;
+          cells = Core.normalizeCells(args.occupied_cells, rows, columns);
+          history = new Core.History(cells, 50); initialized = true; scale = 1;
+        }
+        draw(); setHeight();
+      });
+      streamlitMessage("streamlit:componentReady", { apiVersion: 1 });
+      setHeight();
+    })();
+  </script>
+</body>
+</html>

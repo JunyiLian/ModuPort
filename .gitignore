@@ -1,0 +1,70 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Environments and packaging
+.venv/
+venv/
+env/
+ENV/
+build/
+dist/
+*.egg-info/
+*.whl
+
+# Editors and operating systems
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs, caches, and local configuration
+*.log
+*.tmp
+*.temp
+.env
+.env.*
+!.env.example
+*.local
+private/
+secrets/
+credentials/
+
+# Structural/research artefacts: never commit to the public repository
+*.sdb
+*.s2k
+*.mdb
+*.accdb
+*.edb
+*.f2k
+*.out
+*.op2
+*.odb
+*_validation_results*/
+validation_data/
+benchmarks/output/
+benchmark_output/
+research_data/
+research_outputs/
+optimization_data/
+manuscript/
+manuscripts/
+reviewer_material/
+A30*/
+A32*/
+*500_cases*/
+
+# Generated UI/session exports
+moduport_config.json
+moduport_footprint.json
+moduport_screening_results.csv
+moduport_selected_layout.json
+

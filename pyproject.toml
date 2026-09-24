@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=63", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "moduport"
+version = "0.1.0"
+description = "Mechanics-based superelement analysis and layout screening for multi-storey framed modular structures"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.23",
+  "scipy>=1.9",
+]
+
+[project.optional-dependencies]
+screening = [
+  "pandas>=1.5",
+]
+ui = [
+  "streamlit>=1.30",
+  "pandas>=1.5",
+  "altair>=5,<6",
+]
+
+[tool.setuptools]
+license-files = ["LICENSE"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["moduport*"]
+namespaces = true

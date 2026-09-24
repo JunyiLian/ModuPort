@@ -1,0 +1,13 @@
+ModuPort licensing review notice
+================================
+
+This repository is a public-release candidate, not a licensed public release.
+
+No open-source licence is granted by this file. Redistribution, publication,
+or relicensing of the bundled frozen numerical dependencies is not authorised
+until ownership and licensing have been confirmed for the source groups listed
+in THIRD_PARTY_NOTICES.md.
+
+The project maintainers must replace this notice with an approved licence and
+complete the dependency review before making the repository public.
+
